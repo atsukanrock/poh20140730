@@ -36,17 +36,22 @@ namespace PaizaOnlineHackathon201407
                 }
                 unfinishedCalcResults.Add(new CalcResult(i, currSubcon.Q, currSubcon.R));
             }
-            if (!unfinishedCalcResults.Any())
-            {
-                Console.WriteLine(result);
-                return;
-            }
 
             // n subcontractors
-            for (int count = 1; count < n; count++)
+            while (true)
             {
+                if (!unfinishedCalcResults.Any())
+                {
+                    Console.WriteLine(result);
+                    return;
+                }
                 var calcResults = unfinishedCalcResults.SelectMany(calcResult => CalcNext(calcResult, allSubcons))
                                                        .ToArray();
+                if (!calcResults.Any())
+                {
+                    Console.WriteLine(result);
+                    return;
+                }
                 unfinishedCalcResults.Clear();
                 foreach (var calcResult in calcResults)
                 {
@@ -61,14 +66,7 @@ namespace PaizaOnlineHackathon201407
                     }
                     unfinishedCalcResults.Add(calcResult);
                 }
-                if (!unfinishedCalcResults.Any())
-                {
-                    Console.WriteLine(result);
-                    return;
-                }
             }
-
-            Console.WriteLine(result);
         }
 
         private static IEnumerable<CalcResult> CalcNext(CalcResult currCalcResult,
