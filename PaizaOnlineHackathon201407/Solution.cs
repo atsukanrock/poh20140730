@@ -8,43 +8,33 @@ namespace PaizaOnlineHackathon201407
     {
         private static void Main()
         {
-            var m = int.Parse(Console.ReadLine());
-            var n = int.Parse(Console.ReadLine());
-            var allSubcons = Enumerable.Range(0, n)
-                                       .Select(i => Console.ReadLine().Trim().Split(' ').Select(int.Parse).ToArray())
-                                       .Select((qr, index) => new Subcontractor(qr[0], qr[1], index))
-                                       .ToArray();
+            // parse inputs
+            var m = int.Parse(Console.ReadLine().Trim());
+            var n = int.Parse(Console.ReadLine().Trim());
+            var allSubcons = new Subcontractor[n];
+            for (int i = 0; i < n; i++)
+            {
+                var qr = Console.ReadLine().Trim().Split(' ');
+                allSubcons[i] = new Subcontractor(int.Parse(qr[0]), int.Parse(qr[1]));
+            }
 
             var result = int.MaxValue;
 
-            var unfinishedSubcons = new List<Subcontractor>(n);
+            var unfinishedCalcResults = new List<CalcResult>(n);
             // 1 subcontractor
             for (int i = 0; i < n; i++)
             {
                 var currSubcon = allSubcons[i];
+                if (currSubcon.R > result)
+                {
+                    continue;
+                }
                 if (currSubcon.Q >= m)
                 {
                     result = Math.Min(currSubcon.R, result);
                     continue;
                 }
-                unfinishedSubcons.Add(currSubcon);
-            }
-            if (!unfinishedSubcons.Any())
-            {
-                Console.WriteLine(result);
-                return;
-            }
-
-            // 2 subcontractors
-            var unfinishedCalcResults = new List<CalcResult>(n);
-            foreach (var calcResult in unfinishedSubcons.SelectMany(subcon => CalcNext(subcon, allSubcons)))
-            {
-                if (calcResult.SumQ >= m)
-                {
-                    result = Math.Min(calcResult.SumR, result);
-                    continue;
-                }
-                unfinishedCalcResults.Add(calcResult);
+                unfinishedCalcResults.Add(new CalcResult(i, currSubcon.Q, currSubcon.R));
             }
             if (!unfinishedCalcResults.Any())
             {
@@ -53,13 +43,17 @@ namespace PaizaOnlineHackathon201407
             }
 
             // n subcontractors
-            for (int count = 2; count < n; count++)
+            for (int count = 1; count < n; count++)
             {
                 var calcResults = unfinishedCalcResults.SelectMany(calcResult => CalcNext(calcResult, allSubcons))
                                                        .ToArray();
                 unfinishedCalcResults.Clear();
                 foreach (var calcResult in calcResults)
                 {
+                    if (calcResult.SumR > result)
+                    {
+                        continue;
+                    }
                     if (calcResult.SumQ >= m)
                     {
                         result = Math.Min(calcResult.SumR, result);
@@ -77,56 +71,37 @@ namespace PaizaOnlineHackathon201407
             Console.WriteLine(result);
         }
 
-        private static IEnumerable<CalcResult> CalcNext(Subcontractor currSubcontractor,
-                                                        IList<Subcontractor> allSubcontractors)
-        {
-            for (var i = currSubcontractor.Index + 1; i < allSubcontractors.Count; i++)
-            {
-                var nextSubcon = allSubcontractors[i];
-                yield return new CalcResult(new[] {currSubcontractor, nextSubcon},
-                                            currSubcontractor.Q + nextSubcon.Q,
-                                            currSubcontractor.R + nextSubcon.R);
-            }
-        }
-
         private static IEnumerable<CalcResult> CalcNext(CalcResult currCalcResult,
-                                                        IList<Subcontractor> allSubcontractors)
+                                                        Subcontractor[] allSubcontractors)
         {
-            for (var i = currCalcResult.Subcontractors.Last().Index + 1; i < allSubcontractors.Count; i++)
+            for (var i = currCalcResult.LastIndex + 1; i < allSubcontractors.Length; i++)
             {
-                var resultSubcons = new Subcontractor[currCalcResult.Subcontractors.Length + 1];
-                currCalcResult.Subcontractors.CopyTo(resultSubcons, 0);
                 var nextSubcon = allSubcontractors[i];
-                resultSubcons[resultSubcons.Length - 1] = nextSubcon;
-                yield return new CalcResult(resultSubcons,
-                                            currCalcResult.SumQ + nextSubcon.Q,
-                                            currCalcResult.SumR + nextSubcon.R);
+                yield return new CalcResult(i, currCalcResult.SumQ + nextSubcon.Q, currCalcResult.SumR + nextSubcon.R);
             }
         }
 
-        private class Subcontractor
+        private struct Subcontractor
         {
             public readonly int Q;
             public readonly int R;
-            public readonly int Index;
 
-            public Subcontractor(int q, int r, int index)
+            public Subcontractor(int q, int r)
             {
                 Q = q;
                 R = r;
-                Index = index;
             }
         }
 
-        private class CalcResult
+        private struct CalcResult
         {
-            public readonly Subcontractor[] Subcontractors;
+            public readonly int LastIndex;
             public readonly int SumQ;
             public readonly int SumR;
 
-            public CalcResult(Subcontractor[] subcontractors, int sumQ, int sumR)
+            public CalcResult(int lastIndex, int sumQ, int sumR)
             {
-                Subcontractors = subcontractors;
+                LastIndex = lastIndex;
                 SumQ = sumQ;
                 SumR = sumR;
             }
