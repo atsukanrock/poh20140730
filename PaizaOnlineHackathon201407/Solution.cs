@@ -12,12 +12,12 @@ namespace PaizaOnlineHackathon201407
             var n = int.Parse(Console.ReadLine());
             var allSubcons = Enumerable.Range(0, n)
                                        .Select(i => Console.ReadLine().Trim().Split(' ').Select(int.Parse).ToArray())
-                                       .Select(qr => new Subcontractor(qr[0], qr[1]))
+                                       .Select((qr, index) => new Subcontractor(qr[0], qr[1], index))
                                        .ToArray();
 
             var result = int.MaxValue;
 
-            var yetIndexes1 = new List<int>(n);
+            var unfinishedSubcons = new List<Subcontractor>(n);
             // 1 subcontractor
             for (int i = 0; i < n; i++)
             {
@@ -27,80 +27,108 @@ namespace PaizaOnlineHackathon201407
                     result = Math.Min(currSubcon.R, result);
                     continue;
                 }
-                yetIndexes1.Add(i);
+                unfinishedSubcons.Add(currSubcon);
+            }
+            if (!unfinishedSubcons.Any())
+            {
+                Console.WriteLine(result);
+                return;
             }
 
             // 2 subcontractors
-            var yetIndexes = new List<int[]>();
-            foreach (var indexes in yetIndexes1.SelectMany(index => Next(index, n)))
+            var unfinishedCalcResults = new List<CalcResult>(n);
+            foreach (var calcResult in unfinishedSubcons.SelectMany(subcon => CalcNext(subcon, allSubcons)))
             {
-                var currSubcons = indexes.Select(index => allSubcons[index]).ToArray();
-                if (currSubcons.Sum(subcon => subcon.Q) >= m)
+                if (calcResult.SumQ >= m)
                 {
-                    result = Math.Min(currSubcons.Sum(subcon => subcon.R), result);
+                    result = Math.Min(calcResult.SumR, result);
                     continue;
                 }
-                yetIndexes.Add(indexes);
+                unfinishedCalcResults.Add(calcResult);
+            }
+            if (!unfinishedCalcResults.Any())
+            {
+                Console.WriteLine(result);
+                return;
             }
 
             // n subcontractors
             for (int count = 2; count < n; count++)
             {
-                var currIndexesArray = yetIndexes.SelectMany(indexes => Next(indexes, n)).ToArray();
-                yetIndexes.Clear();
-                foreach (var indexes in currIndexesArray)
+                var calcResults = unfinishedCalcResults.SelectMany(calcResult => CalcNext(calcResult, allSubcons))
+                                                       .ToArray();
+                unfinishedCalcResults.Clear();
+                foreach (var calcResult in calcResults)
                 {
-                    var currSubcons = indexes.Select(i => allSubcons[i]).ToArray();
-                    if (currSubcons.Sum(subcon => subcon.Q) >= m)
+                    if (calcResult.SumQ >= m)
                     {
-                        result = Math.Min(currSubcons.Sum(subccon => subccon.R), result);
+                        result = Math.Min(calcResult.SumR, result);
                         continue;
                     }
-                    yetIndexes.Add(indexes);
+                    unfinishedCalcResults.Add(calcResult);
+                }
+                if (!unfinishedCalcResults.Any())
+                {
+                    Console.WriteLine(result);
+                    return;
                 }
             }
 
             Console.WriteLine(result);
         }
 
-        private static IEnumerable<int[]> Next(int index, int length)
+        private static IEnumerable<CalcResult> CalcNext(Subcontractor currSubcontractor,
+                                                        IList<Subcontractor> allSubcontractors)
         {
-            for (var i = index + 1; i < length; i++)
+            for (var i = currSubcontractor.Index + 1; i < allSubcontractors.Count; i++)
             {
-                yield return new[] {index, i};
+                var nextSubcon = allSubcontractors[i];
+                yield return new CalcResult(new[] {currSubcontractor, nextSubcon},
+                                            currSubcontractor.Q + nextSubcon.Q,
+                                            currSubcontractor.R + nextSubcon.R);
             }
         }
 
-        private static IEnumerable<int[]> Next(int[] currentIndexes, int length)
+        private static IEnumerable<CalcResult> CalcNext(CalcResult currCalcResult,
+                                                        IList<Subcontractor> allSubcontractors)
         {
-            for (var i = currentIndexes.Last() + 1; i < length; i++)
+            for (var i = currCalcResult.Subcontractors.Last().Index + 1; i < allSubcontractors.Count; i++)
             {
-                var result = new int[currentIndexes.Length + 1];
-                currentIndexes.CopyTo(result, 0);
-                result[result.Length - 1] = i;
-                yield return result;
+                var resultSubcons = new Subcontractor[currCalcResult.Subcontractors.Length + 1];
+                currCalcResult.Subcontractors.CopyTo(resultSubcons, 0);
+                var nextSubcon = allSubcontractors[i];
+                resultSubcons[resultSubcons.Length - 1] = nextSubcon;
+                yield return new CalcResult(resultSubcons,
+                                            currCalcResult.SumQ + nextSubcon.Q,
+                                            currCalcResult.SumR + nextSubcon.R);
             }
         }
 
-        private struct Subcontractor
+        private class Subcontractor
         {
-            private readonly int _q;
-            private readonly int _r;
+            public readonly int Q;
+            public readonly int R;
+            public readonly int Index;
 
-            public Subcontractor(int q, int r)
+            public Subcontractor(int q, int r, int index)
             {
-                _q = q;
-                _r = r;
+                Q = q;
+                R = r;
+                Index = index;
             }
+        }
 
-            public int Q
-            {
-                get { return _q; }
-            }
+        private class CalcResult
+        {
+            public readonly Subcontractor[] Subcontractors;
+            public readonly int SumQ;
+            public readonly int SumR;
 
-            public int R
+            public CalcResult(Subcontractor[] subcontractors, int sumQ, int sumR)
             {
-                get { return _r; }
+                Subcontractors = subcontractors;
+                SumQ = sumQ;
+                SumR = sumR;
             }
         }
     }
