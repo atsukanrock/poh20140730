@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace PaizaOnlineHackathon201407
 {
@@ -14,58 +13,37 @@ namespace PaizaOnlineHackathon201407
             var allSubcons = new Subcontractor[n];
             for (int i = 0; i < n; i++)
             {
-                var qr = Console.ReadLine().Trim().Split(' ');
+                var qr = Console.ReadLine().Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
                 allSubcons[i] = new Subcontractor(int.Parse(qr[0]), int.Parse(qr[1]));
+            }
+            if (n == 1)
+            {
+                Console.WriteLine(allSubcons[0].R);
+                return;
             }
 
             var result = int.MaxValue;
+            Compute(new CalcResult(-1, 0, 0), allSubcons, m, ref result);
+            Console.WriteLine(result);
+        }
 
-            var unfinishedCalcResults = new List<CalcResult>(n);
-            // 1 subcontractor
-            for (int i = 0; i < n; i++)
+        private static void Compute(CalcResult calcResult, Subcontractor[] allSubcontractors, int m, ref int result)
+        {
+            if (calcResult.SumR >= result)
             {
-                var currSubcon = allSubcons[i];
-                if (currSubcon.R > result)
-                {
-                    continue;
-                }
-                if (currSubcon.Q >= m)
-                {
-                    result = Math.Min(currSubcon.R, result);
-                    continue;
-                }
-                unfinishedCalcResults.Add(new CalcResult(i, currSubcon.Q, currSubcon.R));
+                return;
             }
-
-            // n subcontractors
-            while (true)
+            if (calcResult.SumQ >= m)
             {
-                if (!unfinishedCalcResults.Any())
+                if (calcResult.SumR < result)
                 {
-                    Console.WriteLine(result);
-                    return;
+                    result = calcResult.SumR;
                 }
-                var calcResults = unfinishedCalcResults.SelectMany(calcResult => CalcNext(calcResult, allSubcons))
-                                                       .ToArray();
-                if (!calcResults.Any())
-                {
-                    Console.WriteLine(result);
-                    return;
-                }
-                unfinishedCalcResults.Clear();
-                foreach (var calcResult in calcResults)
-                {
-                    if (calcResult.SumR > result)
-                    {
-                        continue;
-                    }
-                    if (calcResult.SumQ >= m)
-                    {
-                        result = Math.Min(calcResult.SumR, result);
-                        continue;
-                    }
-                    unfinishedCalcResults.Add(calcResult);
-                }
+                return;
+            }
+            foreach (var nextCalcResult in CalcNext(calcResult, allSubcontractors))
+            {
+                Compute(nextCalcResult, allSubcontractors, m, ref result);
             }
         }
 
@@ -79,7 +57,7 @@ namespace PaizaOnlineHackathon201407
             }
         }
 
-        private struct Subcontractor
+        private class Subcontractor
         {
             public readonly int Q;
             public readonly int R;
@@ -91,7 +69,7 @@ namespace PaizaOnlineHackathon201407
             }
         }
 
-        private struct CalcResult
+        private class CalcResult
         {
             public readonly int LastIndex;
             public readonly int SumQ;
